@@ -1,2 +1,2 @@
 # gtkpass
-A GTK+ 3 program for minimal usage of the standard unix password manager
+A GTK+ 3 program for the standard unix password manager

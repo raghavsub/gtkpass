@@ -17,8 +17,8 @@ class GtkPassWindow(Gtk.Window):
 
     def build_gui(self):
         Gtk.Window.__init__(self, title='pass')
-        self.set_default_size(300, -1)
         self.set_border_width(10)
+        self.set_default_size(300, -1)
 
         self.outer_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.add(self.outer_box)
@@ -102,6 +102,3 @@ def main():
     win.connect('delete-event', Gtk.main_quit)
     win.show_all()
     Gtk.main()
-
-if __name__ == '__main__':
-    main()
