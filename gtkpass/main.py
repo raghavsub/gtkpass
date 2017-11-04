@@ -2,17 +2,22 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
+import glob
 import os
-import re
-import subprocess
+
+from subprocess import Popen, PIPE, run, STDOUT
 
 class GtkPassWindow(Gtk.Window):
     
     def __init__(self):
         self.search_text = ''
         self.search_result_text = ''
+        self.get_pass_path()
         self.build_gui()
         self.build_data_structures()
+
+    def get_pass_path(self):
+        self.pass_path = os.path.expanduser('~/.password-store')
 
     def build_gui(self):
         Gtk.Window.__init__(self, title='pass')
@@ -24,9 +29,8 @@ class GtkPassWindow(Gtk.Window):
         self.text_entry = Gtk.Entry()
         self.text_entry.connect('key-release-event', self.on_key_release)
         self.text_entry.connect('activate', self.on_activate)
-        self.text_entry.set_icon_from_icon_name(
-                        Gtk.EntryIconPosition.PRIMARY,
-                        'system-search-symbolic')
+        self.text_entry.set_icon_from_icon_name(Gtk.EntryIconPosition.PRIMARY,
+                                                'system-search-symbolic')
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.box.pack_start(self.text_view, True, True, 0)
         self.box.pack_start(self.text_entry, True, True, 0)
@@ -34,29 +38,20 @@ class GtkPassWindow(Gtk.Window):
         self.text_entry.grab_focus()
 
     def build_data_structures(self):
-        self.pass_path = os.path.expanduser('~/.password-store')
+        glob_out = glob.glob(os.path.join(self.pass_path, '**/*.gpg'),
+                             recursive=True)
         self.pass_list = []
-        self.pass_dict = {}
-        for root, dirs, files in os.walk(self.pass_path):
-            dirs[:] = [d for d in dirs if d[0] != '.']
-            files[:] = [f for f in files if f[0] != '.']
-            for file_ in files:
-                gpg_path = os.path.join(root, file_)
-                item_name = os.path.splitext(os.path.relpath(
-                            gpg_path, self.pass_path))[0]
-                self.pass_list.append(item_name)
-                self.pass_dict[item_name] = gpg_path
+        for path in glob_out:
+            pass_list_item = os.path.relpath('/'.join(path.split('/')),
+                                             self.pass_path)
+            pass_list_item = os.path.splitext(pass_list_item)[0]
+            self.pass_list.append(pass_list_item)
 
     def fuzzy_find(self):
-        suggestions = []
-        pattern = '.*?'.join(map(re.escape, self.search_text))
-        regex = re.compile(pattern, re.IGNORECASE)
-        for item in self.pass_list:
-            result = regex.search(item)
-            if result:
-                suggestions.append((len(result.group()), item))
-        suggestions = sorted(suggestions, key=lambda x: x[0])
-        return [item[1] for item in suggestions]
+        p = Popen(['fzf', '-f', self.search_text],
+                  stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+        fzf_in = '\n'.join(self.pass_list).encode('utf-8')
+        return p.communicate(fzf_in)[0].decode().strip().split('\n')
 
     def on_key_release(self, widget, event):
         if event.keyval == Gdk.KEY_Escape:
@@ -83,7 +78,7 @@ class GtkPassWindow(Gtk.Window):
 
     def copy_to_clipboard(self):
         if self.search_result_text:
-            subprocess.call(['pass', '-c', self.search_result_text])
+            p = run(['pass', '-c', self.search_result_text])
             self.text_entry.set_icon_from_icon_name(
                             Gtk.EntryIconPosition.SECONDARY,
                             'edit-paste-symbolic')
