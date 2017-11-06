@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='gtkpass',
-      version='0.2.5',
+      version='0.2.7',
       description='A GTK+ 3 program for the standard unix password manager',
       url='http://github.com/raghavsub/gtkpass',
       author='Raghav Subramaniam',

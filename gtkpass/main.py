@@ -45,7 +45,11 @@ class GtkPassWindow(Gtk.Window):
                     self.pass_list.append(pass_list_item)
 
     def fuzzy_find(self):
-        p = Popen(['fzf', '-f', self.search_text],
+        env = os.environ.copy()
+        fzf_bin = os.path.expanduser('~/.fzf/bin')
+        if fzf_bin not in env['PATH']:
+            env['PATH'] += '{}:{}'.format(env['PATH'], fzf_bin)
+        p = Popen(['fzf', '-f', self.search_text], env=env,
                   stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         fzf_in = '\n'.join(self.pass_list).encode('utf-8')
         return p.communicate(fzf_in)[0].decode().strip().split('\n')
