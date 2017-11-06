@@ -1,11 +1,8 @@
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
-
-import glob
 import os
-
-from subprocess import Popen, PIPE, run, STDOUT
+from subprocess import call, Popen, PIPE, STDOUT
 
 class GtkPassWindow(Gtk.Window):
     
@@ -38,14 +35,14 @@ class GtkPassWindow(Gtk.Window):
         self.text_entry.grab_focus()
 
     def build_data_structures(self):
-        glob_out = glob.glob(os.path.join(self.pass_path, '**/*.gpg'),
-                             recursive=True)
         self.pass_list = []
-        for path in glob_out:
-            pass_list_item = os.path.relpath('/'.join(path.split('/')),
-                                             self.pass_path)
-            pass_list_item = os.path.splitext(pass_list_item)[0]
-            self.pass_list.append(pass_list_item)
+        for root, dirs, files in os.walk(self.pass_path):
+            for file_ in files:
+                file_ = os.path.join(root, file_)
+                if os.path.splitext(file_)[1] == '.gpg':
+                    pass_list_item = os.path.relpath(file_, self.pass_path)
+                    pass_list_item = os.path.splitext(pass_list_item)[0]
+                    self.pass_list.append(pass_list_item)
 
     def fuzzy_find(self):
         p = Popen(['fzf', '-f', self.search_text],
@@ -78,7 +75,7 @@ class GtkPassWindow(Gtk.Window):
 
     def copy_to_clipboard(self):
         if self.search_result_text:
-            p = run(['pass', '-c', self.search_result_text])
+            p = call(['pass', '-c', self.search_result_text])
             self.text_entry.set_icon_from_icon_name(
                             Gtk.EntryIconPosition.SECONDARY,
                             'edit-paste-symbolic')
@@ -89,3 +86,6 @@ def main():
     win.connect('delete-event', Gtk.main_quit)
     win.show_all()
     Gtk.main()
+
+if __name__ == '__main__':
+    main()
